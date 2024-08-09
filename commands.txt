@@ -1,0 +1,10 @@
+How to Read .env file
+----------------------
+Method1
+----------
+export $(xargs < .env)
+xargs < .env
+
+Method2
+-------
+source .env
