@@ -33,7 +33,7 @@ get_project_services() {
     echo "$response"
 }
 
-# ************************** Example Usage **************************
-# Example usage to fetch services for a specific project
-services_response=$(get_project_services "main-sequence")
-echo "Services: $services_response"
+# # ************************** Example Usage **************************
+# # Example usage to fetch services for a specific project
+# services_response=$(get_project_services "main-sequence")
+# echo "Services: $services_response"

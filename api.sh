@@ -15,8 +15,14 @@ make_api_request() {
         response=$(curl -s --request GET \
             --url "$URL" \
             --header "Authorization: Bearer $AIVEN_API_TOKEN")
+    elif [ "$METHOD" == "PUT" ]; then
+        response=$(curl -s --request PUT \
+            --url "$URL" \
+            --header "Authorization: Bearer $AIVEN_API_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data "$DATA")
     else
-        echo "Unsupported request method: $METHOD"
+        echo "Unsupported request method: $METHOD, please check api.sh file"
         return 1 # Return 1 for error
     fi
 
