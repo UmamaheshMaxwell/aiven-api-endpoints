@@ -93,9 +93,9 @@ USER_GROUP_NAME="main-sequence-dev"
 
 # Call the function and store the complete response
 response=$(create_user_group "$ORGANIZATION_ID" "$DESCRIPTION" "$USER_GROUP_NAME")
+echo "$response"
 GROUP_ID=$(echo "$response" | jq -r '.user_group_id')
 echo "$GROUP_ID"
-
 
 # ************************** Add User Group to Project with Role **************************
 # Define the input values
