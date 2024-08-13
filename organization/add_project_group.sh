@@ -35,14 +35,7 @@ EOF
     # Call the make_api_request function to add the group to the project
     response=$(make_api_request "$METHOD" "$URL" "$JSON_DATA")
 
-    # Check if the request was unsuccessful based on the error structure
-    if echo "$response" | jq -e '.errors | length > 0' >/dev/null; then
-        echo "Failed to add group to project: $(echo "$response" | jq -r '.errors[0].message')" >&2
-        return 1 # Return 1 for failure
-    fi
-
     # Return the full response for the added group
     echo "$response"
     return 0 # Return 0 for success
 }
-
