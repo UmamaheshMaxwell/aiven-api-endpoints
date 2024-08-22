@@ -1,6 +1,5 @@
-Here’s a `README.md` file to help anyone set up, run, and clean up your project using the provided scripts:
 
-```markdown
+
 # Project Setup and Cleanup Guide
 
 This guide provides step-by-step instructions on how to set up, run, and clean up your project using the provided Bash scripts.
@@ -105,6 +104,3 @@ This script will delete all the resources including projects, services, database
 ## Conclusion
 
 Follow these steps to set up and clean up your project efficiently. If you encounter any issues, review the logs output by each script to troubleshoot.
-```
-
-This `README.md` provides clear and detailed instructions for setting up, running, and cleaning up the project using your scripts.
