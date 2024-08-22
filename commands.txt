@@ -8,3 +8,35 @@ xargs < .env
 Method2
 -------
 source .env
+
+*********************************** Setup avn client ***********************************
+
+1. Install the aiven-client Package
+
+pip install aiven-client
+
+After installing, you might be able to run aiven directly without needing the alias or script.
+
+To create a shortcut 
+-----------------------
+alias aiven='python -m aiven.client'
+
+Windows
+----------
+Create a PowerShell Function
+
+Open your PowerShell profile:
+-------------------------------
+ run this command:  notepad $PROFILE
+
+Add the function:
+------------------
+function aiven {
+    python -m aiven.client $args
+}
+
+Save and close the file.
+
+Reload the PowerShell profile:
+--------------------------------
+. $PROFILE

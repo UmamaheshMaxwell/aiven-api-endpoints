@@ -2,10 +2,6 @@
 
 source service/get_service.sh
 
-# Define the project and service names
-PROJECT_NAME="main-sequence"  # Set this to your actual project name
-SERVICE_NAME="ts-orm-service"  # Set this to your actual service name
-
 # Function to check the status of a specific service within a project
 check_service_status() {
     local PROJECT_NAME=$1      # First parameter: Project name

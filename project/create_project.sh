@@ -45,12 +45,6 @@ EOF
     # Call the make_api_request function to create the project
     response=$(make_api_request "$METHOD" "$URL" "$JSON_DATA")
 
-    # Check if the request was unsuccessful based on the error structure
-    if echo "$response" | jq -e '.errors | length > 0' >/dev/null; then
-        echo "Failed to create project: $(echo "$response" | jq -r '.errors[0].message')"
-        return 1 # Return 1 for failure
-    fi
-
     echo "$response"
 }
 

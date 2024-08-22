@@ -1,108 +1,99 @@
 #!/bin/bash
 
-source read_env.sh  
-source account/get_account.sh
-source billing/get_billing_group.sh
+source read_env.sh
+source constants.sh
 source project/create_project.sh
 source service/create_service.sh
 source service/check_service_status.sh
 source database/create_database.sh
+source project/add_project_group.sh
 source organization/create_group.sh
-source organization/add_project_group.sh
+source vpc/create_vpc_peering.sh
+
  
 
 # ************************** Get AIVEN_API_TOKEN **************************
-# Get AIVEN_API_TOKEN
 AIVEN_API_TOKEN=$(get_mst_api_token)
 #echo "The captured AIVEN_API_TOKEN is: $AIVEN_API_TOKEN"
 
-# ************************** Get Account ID **************************
-# Call get_account function and capture the full JSON response
-account_response=$(get_account)
-# Extract account_id using jq
-account_id=$(echo "$account_response" | jq -r '.accounts[0].account_id')
-# Now you can use the account_id variable
-echo "The captured account_id is: $account_id"
+# ************************** Get BILLING_GROUP_ID **************************
+# Now you can access the BILLING_GROUP_ID constant
+echo "The Billing Group ID is: $BILLING_GROUP_ID"
 
-# ************************** Get Billing Group ID **************************
-# Call the function and store the full response in a variable
-billing_group_response=$(get_billing_group)
-# Extract the billing_group_id from the full response
-billing_group_id=$(echo "$billing_group_response" | jq -r '.billing_groups[0].billing_group_id')
-# Now you can use the billing_group_id variable
-echo "The captured billing_group_id is: $billing_group_id"
+# # ************************** Create Project **************************
 
-# ************************** Create Project **************************
-# Define the input values
-ACCOUNT_ID=$account_id
-CLOUD_PROVIDER="google-europe-west1"
-PROJECT_NAME="main-sequence"
-BASE_PORT=15000
-BILLING_GROUP_ID=$billing_group_id
-TAGS='{"env": "dev", "db": "timescale"}'
-
-# Call the function with the named variables
 create_project "$ACCOUNT_ID" "$CLOUD_PROVIDER" "$PROJECT_NAME" "$BASE_PORT" "$BILLING_GROUP_ID" "$TAGS" 
+echo "Project $PROJECT_NAME created"
 
 # ************************** Create Service within a Project **************************
-# Define the input values
-PROJECT_NAME="main-sequence"
-CLOUD_PROVIDER="timescale-google-europe-west1"
-COPY_TAGS=true
-MAINTENANCE_DOW="monday"
-MAINTENANCE_TIME="10:00:00"
-PLAN="timescale-dev-only"
-SERVICE_NAME="ts-orm-service"
-SERVICE_TYPE="pg"
-TAGS='{"env": "dev", "db": "timescale"}'
-TERMINATION_PROTECTION=false # should be set to true, for real deployment
 
-# Call the function with the named variables
-create_project_service "$PROJECT_NAME" "$CLOUD_PROVIDER" "$COPY_TAGS" "$MAINTENANCE_DOW" "$MAINTENANCE_TIME" "$PLAN" "$SERVICE_NAME" "$SERVICE_TYPE" "$TAGS" "$TERMINATION_PROTECTION"
+# ************************** Environment Configurations **************************
+declare -A environments=(
+  ["Production"]="ts-orm-production"
+  ["Staging"]="ts-orm-staging"
+  ["Development"]="ts-orm-development"
+)
 
-# ************************** Wait for Service to be Ready **************************
-echo "Waiting for the service to be up and running..."
-while true; do
-    service_status=$(check_service_status "$PROJECT_NAME" "$SERVICE_NAME")
-    if [[ "$service_status" == "RUNNING" ]]; then
-        echo "Service is running. Proceeding with database creation..."
-        break
-    else
-        echo "Service is not yet running. Retrying in 30 seconds..."
-        sleep 30
-    fi
+# ************************** Loop Through Environments **************************
+for ENV in "${!environments[@]}"; do
+    SERVICE_NAME="${environments[$ENV]}"
+    TAGS="{\"env\": \"${ENV,,}\", \"db\": \"timescale\"}" # env in lowercase
+
+    echo "************************** Creating Service for $ENV **************************"
+    
+    # Call the function to create the service
+    create_project_service "$PROJECT_NAME" "$CLOUD_PROVIDER" "$COPY_TAGS" "$MAINTENANCE_DOW" "$MAINTENANCE_TIME" "$PLAN" "$SERVICE_NAME" "$SERVICE_TYPE" "$TAGS" "$TERMINATION_PROTECTION"
+
+    # ************************** Wait for Service to be Ready **************************
+    echo "Waiting for the $ENV service to be up and running..."
+    while true; do
+        service_status=$(check_service_status "$PROJECT_NAME" "$SERVICE_NAME")
+        if [[ "$service_status" == "RUNNING" ]]; then
+            echo "$ENV service is running. Proceeding with database creation..."
+            break
+        else
+            echo "$ENV service is not yet running. Retrying in 30 seconds..."
+            sleep 30
+        fi
+    done
+
+    # ************************** Create Database within the Service **************************
+    echo "************************** Creating Database in $ENV **************************"
+    
+    # Call the function to create the database
+    create_database "$PROJECT_NAME" "$SERVICE_NAME" "$DATABASE_NAME" "$LC_COLLATE" "$LC_CTYPE"
 done
 
-# ************************** Create Database within a Service **************************
-# Define the input values
-PROJECT_NAME="main-sequence"
-SERVICE_NAME="ts-orm-service"
-DATABASE_NAME="TimescaleDB"
-LC_COLLATE="en_US.UTF-8"
-LC_CTYPE="en_US.UTF-8"
+# ************************** Create User Groups         *****************************
+# ************************** Environment Configurations *****************************
+declare -A environments=(
+  ["Production"]="main-sequence-prod"
+  ["Staging"]="main-sequence-stg"
+  ["Development"]="main-sequence-dev"
+)
 
-# Call the function with the named variables
-create_database "$PROJECT_NAME" "$SERVICE_NAME" "$DATABASE_NAME" "$LC_COLLATE" "$LC_CTYPE"
+# ************************** Loop Through Environments **************************
+for ENV in "${!environments[@]}"; do
+    USER_GROUP_NAME="${environments[$ENV]}"
+    DESCRIPTION="User group for the ${ENV} Team with access to project resources and tools"
 
+    echo "************************** Creating User Group for $ENV **************************"
+    
+    # Call the function to create the user group and store the complete response
+    response=$(create_user_group "$ORGANIZATION_ID" "$DESCRIPTION" "$USER_GROUP_NAME")
+    echo "$response"
+    
+    # Extract the User Group ID from the response
+    GROUP_ID=$(echo "$response" | jq -r '.user_group_id')
+    echo "Extracted Group ID: $GROUP_ID"
 
-# ************************** Create User Group and Extract ID **************************
-# Define the input values
-ORGANIZATION_ID="org4d0fade9534"
-DESCRIPTION="User group for the Development Team with access to project resources and tools"
-USER_GROUP_NAME="main-sequence-dev"
+    # ************************** Add User Group to Project with Role **************************
+    echo "************************** Adding User Group to Project for $ENV **************************"
 
-# Call the function and store the complete response
-response=$(create_user_group "$ORGANIZATION_ID" "$DESCRIPTION" "$USER_GROUP_NAME")
-echo "$response"
-GROUP_ID=$(echo "$response" | jq -r '.user_group_id')
-echo "$GROUP_ID"
+    # Call the function to add the user group to the project
+    add_user_group_to_project "$ORGANIZATION_ID" "$PROJECT_NAME" "$GROUP_ID" "$ROLE"
+done
 
-# ************************** Add User Group to Project with Role **************************
-# Define the input values
-ORG_ID="org4d0fade9534"  # Replace with the actual organization ID
-PROJECT_NAME="main-sequence"
-GROUP_ID="$GROUP_ID"
-ROLE="developer"  # Available roles: admin, operator, developer, read_only
-
-# Call the function with the named variables
-add_user_group_to_project "$ORG_ID" "$PROJECT_NAME" "$GROUP_ID" "$ROLE"
+# ************************** Create VPC within a Project **************************
+vpc=$(create_vpc "$PROJECT_NAME" "$CLOUD_NAME" "$NETWORK_CIDR")
+echo "$vpc"
